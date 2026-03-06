@@ -1,22 +1,27 @@
 {
   "expo": {
-    "name": "block-blast-puzzle",
+    "name": "Block Blast Puzzle",
     "slug": "block-blast-puzzle",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0D0D1A",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#0D0D1A"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "bundleIdentifier": "com.blockblastpuzzle.app",
+      "buildNumber": "1"
     },
     "android": {
+      "package": "com.blockblastpuzzle.app",
+      "versionCode": 1,
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0D0D1A",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -25,6 +30,7 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": []
   }
 }

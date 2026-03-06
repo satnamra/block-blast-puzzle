@@ -1,20 +1,41 @@
+import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { getStats, isTutorialDone } from './src/game/storage';
+import { MenuScreen } from './src/screens/MenuScreen';
+import { GameScreen } from './src/screens/GameScreen';
+
+type Screen = 'menu' | 'game';
 
 export default function App() {
+  const [screen, setScreen] = useState<Screen>('menu');
+  const [highScore, setHighScore] = useState(0);
+  const [tutorialDone, setTutorialDone] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    Promise.all([getStats(), isTutorialDone()]).then(([stats, done]) => {
+      setHighScore(stats.highScore);
+      setTutorialDone(done);
+      setLoaded(true);
+    });
+  }, []);
+
+  if (!loaded) return null;
+
   return (
-    <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <>
+      <StatusBar style="light" />
+      {screen === 'menu' && (
+        <MenuScreen onPlay={() => setScreen('game')} />
+      )}
+      {screen === 'game' && (
+        <GameScreen
+          highScore={highScore}
+          onHighScoreChange={setHighScore}
+          onBackToMenu={() => setScreen('menu')}
+          skipTutorial={tutorialDone}
+        />
+      )}
+    </>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
