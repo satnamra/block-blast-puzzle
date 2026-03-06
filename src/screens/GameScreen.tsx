@@ -11,7 +11,7 @@ import { FloatingScore } from '../components/FloatingScore';
 import { LevelUpModal } from '../components/LevelUpModal';
 import { COLORS } from '../theme';
 import { canPlace } from '../game/engine';
-import { getNextLevel, getProgressToNextLevel } from '../game/levels';
+import { getProgressToNextLevel } from '../game/levels';
 import { markTutorialDone } from '../game/storage';
 
 interface Props {
@@ -35,6 +35,7 @@ export function GameScreen({ highScore, onHighScoreChange, onBackToMenu, skipTut
   const gameoverOpacity = useRef(new Animated.Value(0)).current;
   const gameoverScale = useRef(new Animated.Value(0.8)).current;
   const scoreScale = useRef(new Animated.Value(1)).current;
+  const shakeX = useRef(new Animated.Value(0)).current;
   const prevScore = useRef(0);
 
   const haptic = useCallback((t: 'light' | 'medium' | 'error' | 'select') => {
@@ -83,12 +84,20 @@ export function GameScreen({ highScore, onHighScoreChange, onBackToMenu, skipTut
     }
   }, [state.status]);
 
-  // Line clear animation
+  // Line clear animation + screen shake
   useEffect(() => {
     if (state.lastClearInfo && (state.lastClearInfo.rows.length || state.lastClearInfo.cols.length)) {
       setClearingRows(state.lastClearInfo.rows);
       setClearingCols(state.lastClearInfo.cols);
       haptic('medium');
+      // Screen shake
+      Animated.sequence([
+        Animated.timing(shakeX, { toValue: -7, duration: 40, useNativeDriver: true }),
+        Animated.timing(shakeX, { toValue: 7, duration: 50, useNativeDriver: true }),
+        Animated.timing(shakeX, { toValue: -4, duration: 40, useNativeDriver: true }),
+        Animated.timing(shakeX, { toValue: 3, duration: 35, useNativeDriver: true }),
+        Animated.timing(shakeX, { toValue: 0, duration: 35, useNativeDriver: true }),
+      ]).start();
       const t = setTimeout(() => { setClearingRows([]); setClearingCols([]); }, 380);
       return () => clearTimeout(t);
     }
@@ -123,7 +132,6 @@ export function GameScreen({ highScore, onHighScoreChange, onBackToMenu, skipTut
   }, [selectedIdx, state.pieces, state.grid, placePieceAt]);
 
   const activePiece = selectedIdx !== null ? (state.pieces[selectedIdx] ?? null) : null;
-  const nextLevel = getNextLevel(state.score);
   const progress = getProgressToNextLevel(state.score);
 
   return (
@@ -160,31 +168,23 @@ export function GameScreen({ highScore, onHighScoreChange, onBackToMenu, skipTut
               <Text style={styles.comboText}>🔥×{state.combo}</Text>
             </View>
           ) : (
-            <View style={{ width: 52 }} />
+            <View style={[styles.levelBadge, { borderColor: state.level.color + '50' }]}>
+              <View style={[styles.levelDot, { backgroundColor: state.level.color }]} />
+              <Text style={[styles.levelBadgeTxt, { color: state.level.color }]}>LV.{state.level.level}</Text>
+            </View>
           )}
         </View>
 
-        {/* ── LEVEL BAR ── */}
-        <View style={styles.levelRow}>
-          <View style={[styles.levelPill, { borderColor: state.level.color + '80' }]}>
-            <View style={[styles.levelDot, { backgroundColor: state.level.color }]} />
-            <Text style={[styles.levelTxt, { color: state.level.color }]}>
-              Lv.{state.level.level} {state.level.name}
-            </Text>
-          </View>
-          <View style={styles.progressBg}>
-            <View style={[styles.progressFill, {
-              backgroundColor: state.level.color,
-              width: `${Math.round(progress * 100)}%` as any,
-            }]} />
-          </View>
-          {nextLevel && (
-            <Text style={styles.nextTxt}>{nextLevel.scoreThreshold.toLocaleString()}</Text>
-          )}
+        {/* ── LEVEL PROGRESS STRIP ── */}
+        <View style={styles.levelBar}>
+          <View style={[styles.levelBarFill, {
+            backgroundColor: state.level.color,
+            width: `${Math.round(progress * 100)}%` as any,
+          }]} />
         </View>
 
         {/* ── GRID ── */}
-        <View style={styles.gridWrap}>
+        <Animated.View style={[styles.gridWrap, { transform: [{ translateX: shakeX }] }]}>
           <GameGrid
             grid={state.grid}
             activePiece={activePiece}
@@ -198,7 +198,7 @@ export function GameScreen({ highScore, onHighScoreChange, onBackToMenu, skipTut
           {state.scorePopups.map(p => (
             <FloatingScore key={p.id} id={p.id} value={p.value} label={p.label} onDone={removePopup} />
           ))}
-        </View>
+        </Animated.View>
 
         {/* ── STEP INDICATOR ── */}
         {state.status === 'playing' && (
@@ -331,26 +331,22 @@ const styles = StyleSheet.create({
   },
   comboText: { color: COLORS.accent, fontSize: 12, fontWeight: '800' },
 
-  levelRow: {
-    flexDirection: 'row', alignItems: 'center',
-    width: '100%', paddingHorizontal: 16,
-    gap: 8, marginBottom: 10,
+  levelBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    borderRadius: 10, borderWidth: 1,
+    paddingHorizontal: 8, paddingVertical: 4, width: 52, justifyContent: 'center',
   },
-  levelPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    borderRadius: 20, borderWidth: 1,
-    paddingHorizontal: 10, paddingVertical: 4,
-  },
-  levelDot: { width: 6, height: 6, borderRadius: 3 },
-  levelTxt: { fontSize: 11, fontWeight: '800' },
-  progressBg: {
-    flex: 1, height: 5, backgroundColor: COLORS.bgCardHigh,
-    borderRadius: 3, overflow: 'hidden',
-  },
-  progressFill: { height: '100%', borderRadius: 3 },
-  nextTxt: { color: COLORS.textMuted, fontSize: 9, fontWeight: '600' },
+  levelDot: { width: 5, height: 5, borderRadius: 3 },
+  levelBadgeTxt: { fontSize: 10, fontWeight: '900', letterSpacing: 0.5 },
 
-  gridWrap: { position: 'relative', marginBottom: 10 },
+  levelBar: {
+    width: '100%', height: 3,
+    backgroundColor: COLORS.bgCardHigh,
+    marginBottom: 10,
+  },
+  levelBarFill: { height: '100%' },
+
+  gridWrap: { position: 'relative', marginBottom: 10, alignItems: 'center' },
 
   stepRow: {
     flexDirection: 'row', alignItems: 'center',
